@@ -1,13 +1,14 @@
-"""Embedding wrapper skeleton for the upgraded RAG pipeline."""
+"""Embedding wrapper for the upgraded RAG pipeline."""
+
+from .config import EMBED_MODEL
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    """Return embeddings for a list of texts.
-
-    The real Ollama integration is implemented in a later task. Empty input is
-    handled now so imports and simple smoke tests are stable.
-    """
+    """Return Ollama embeddings for a list of texts."""
     if not texts:
         return []
-    raise NotImplementedError("Ollama embedding integration is implemented in a later task.")
 
+    import ollama
+
+    response = ollama.embed(model=EMBED_MODEL, input=texts)
+    return response["embeddings"]
