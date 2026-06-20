@@ -1,0 +1,10 @@
+"""Configuration defaults for the upgraded RAG assistant."""
+
+APP_TITLE = "AIO 2026 Learning Assistant"
+LLM_MODEL = "vicuna:7b-v1.5-q5_1"
+EMBED_MODEL = "bge-m3"
+CHROMA_PATH = "chroma_db"
+DEFAULT_K = 4
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 200
+

@@ -143,7 +143,7 @@ docs/
   Project planning, architecture notes, backlog support docs, demo scripts and evaluation notes.
 ```
 
-Current workspace note: the repository may temporarily contain `Baseline_Project/` and `Upgrade_Project/`. The backlog uses the logical names `baseline/` and `upgrade/`; folder normalization is handled by the relevant structure task.
+Current workspace note: the repository uses `baseline/` and `upgrade/` as the active project folders. Legacy folders and unrelated artifacts are stored under `others/`.
 
 ## 7. Coding Rules
 
@@ -205,4 +205,3 @@ The project should not prioritize:
 - Fine-tuning LLMs.
 - Perfect OCR/table extraction for every PDF type.
 - Large scope additions outside the approved backlog.
-

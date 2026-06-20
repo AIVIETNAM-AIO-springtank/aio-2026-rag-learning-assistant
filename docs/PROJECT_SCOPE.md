@@ -98,7 +98,7 @@ Quy tắc:
 - Code cần rõ ràng, có docstring và dễ giải thích khi nộp bài.
 - Không hard-code token, API key hoặc thông tin cá nhân.
 
-Ghi chú hiện trạng workspace: repository hiện có `Baseline_Project/` và `Upgrade_Project/`. Trong tài liệu scope và backlog, `baseline/` và `upgrade/` được dùng như tên logic. Việc chuẩn hóa folder vật lý sẽ được xử lý ở task cấu trúc thư mục sau.
+Ghi chú hiện trạng workspace: repository đã chuẩn hóa theo hai thư mục chính `baseline/` và `upgrade/`. Các artifact cũ hoặc không thuộc cấu trúc chính được gom vào `others/`.
 
 ## 7. Scope
 
@@ -163,4 +163,3 @@ Task `AIO-S1-001` được xem là hoàn thành khi:
 - Out-of-scope trước `2026-06-30` được nêu rõ để tránh mở rộng quá deadline.
 - Tài liệu được lưu trong `docs/`.
 - Không có code nào bị sửa trong task này.
-
