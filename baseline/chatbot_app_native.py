@@ -1,15 +1,19 @@
 """Baseline Streamlit PDF RAG chatbot using Gemini and session ChromaDB.
 
-This baseline stays intentionally simple for demos:
+This baseline is optimized for Streamlit Cloud demos:
 - PDF text is extracted with pypdf.
-- Chunks and query are embedded through Gemini's embedding API.
+- Chunks and queries use a local hashing embedding, so upload/index does not
+  call Gemini embedding APIs.
 - ChromaDB is in-memory per Streamlit session.
 - Answers are generated with Gemini.
 """
 
 from __future__ import annotations
 
+import hashlib
+import math
 import os
+import re
 import tempfile
 import time
 from collections.abc import Iterable
@@ -22,11 +26,13 @@ import streamlit as st
 
 
 GEMINI_GENERATION_MODEL = os.getenv("GEMINI_GENERATION_MODEL", "gemini-1.5-flash")
-GEMINI_EMBEDDING_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL", "text-embedding-004")
+LOCAL_EMBEDDING_MODEL = "local-hash-embedding"
+LOCAL_EMBEDDING_DIM = int(os.getenv("LOCAL_EMBEDDING_DIM", "384"))
 DEFAULT_K = int(os.getenv("DEFAULT_K", "2"))
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1000"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "200"))
 REQUEST_TIMEOUT = int(os.getenv("GEMINI_REQUEST_TIMEOUT", "60"))
+TOKEN_PATTERN = re.compile(r"[\wÀ-ỹ]+", re.UNICODE)
 
 PROMPT = """Bạn là trợ lý hỏi đáp tài liệu học tập.
 Chỉ dùng các đoạn ngữ cảnh dưới đây để trả lời câu hỏi.
@@ -58,27 +64,36 @@ def gemini_endpoint(model: str, action: str, api_key: str) -> str:
     return f"https://generativelanguage.googleapis.com/v1beta/models/{model}:{action}?key={api_key}"
 
 
-def embed_texts(texts: list[str], api_key: str | None = None) -> list[list[float]]:
-    """Embed texts with Gemini and return vector lists."""
-    if not texts:
-        return []
+def token_index(token: str, dimension: int = LOCAL_EMBEDDING_DIM) -> int:
+    """Map a token to a stable vector index."""
+    digest = hashlib.md5(token.encode("utf-8")).hexdigest()
+    return int(digest, 16) % dimension
 
-    key = api_key or get_gemini_api_key()
-    if not key:
-        raise RuntimeError("Missing GEMINI_API_KEY. Add it to Streamlit secrets or environment variables.")
 
-    embeddings: list[list[float]] = []
-    url = gemini_endpoint(GEMINI_EMBEDDING_MODEL, "embedContent", key)
-    for text in texts:
-        payload = {
-            "model": f"models/{GEMINI_EMBEDDING_MODEL}",
-            "content": {"parts": [{"text": text}]},
-        }
-        response = requests.post(url, json=payload, timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        data = response.json()
-        embeddings.append(data["embedding"]["values"])
-    return embeddings
+def embed_one(text: str, dimension: int = LOCAL_EMBEDDING_DIM) -> list[float]:
+    """Embed text locally with a normalized hashing bag-of-words vector."""
+    vector = [0.0] * dimension
+    for token in TOKEN_PATTERN.findall(text.lower()):
+        vector[token_index(token, dimension)] += 1.0
+
+    norm = math.sqrt(sum(value * value for value in vector))
+    if norm == 0:
+        return vector
+    return [value / norm for value in vector]
+
+
+def embed_texts(texts: list[str]) -> list[list[float]]:
+    """Embed texts locally without calling an external embedding API."""
+    return [embed_one(text) for text in texts]
+
+
+def safe_post_json(url: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """POST JSON and raise sanitized errors that do not expose API keys."""
+    response = requests.post(url, json=payload, timeout=REQUEST_TIMEOUT)
+    if response.status_code >= 400:
+        detail = response.text[:300].replace("\n", " ")
+        raise RuntimeError(f"Gemini API error {response.status_code}: {detail}")
+    return response.json()
 
 
 def generate_answer(prompt: str, api_key: str | None = None) -> str:
@@ -92,9 +107,7 @@ def generate_answer(prompt: str, api_key: str | None = None) -> str:
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0, "maxOutputTokens": 512},
     }
-    response = requests.post(url, json=payload, timeout=REQUEST_TIMEOUT)
-    response.raise_for_status()
-    data = response.json()
+    data = safe_post_json(url, payload)
     candidates = data.get("candidates", [])
     if not candidates:
         return "Tôi chưa nhận được câu trả lời từ Gemini."
@@ -183,22 +196,22 @@ def main() -> None:
     with st.sidebar:
         st.subheader("Cấu hình")
         st.caption(f"Generation model: `{GEMINI_GENERATION_MODEL}`")
-        st.caption(f"Embedding model: `{GEMINI_EMBEDDING_MODEL}`")
+        st.caption(f"Embedding: `{LOCAL_EMBEDDING_MODEL}` ({LOCAL_EMBEDDING_DIM} dim)")
         if not get_gemini_api_key():
             st.warning("Chưa cấu hình GEMINI_API_KEY trong Streamlit secrets hoặc environment.")
 
         st.subheader("Upload tài liệu")
         uploaded_file = st.file_uploader("Chọn file PDF", type="pdf")
         if uploaded_file and st.button("Xử lý PDF", use_container_width=True):
-            with st.spinner("Đang xử lý PDF và tạo embedding..."):
+            with st.spinner("Đang xử lý PDF và tạo embedding local..."):
                 try:
                     st.session_state.collection, chunk_count = process_pdf(uploaded_file)
                     st.session_state.pdf_name = uploaded_file.name
                     st.session_state.chat_history = []
                     st.success(f"Đã index {chunk_count} chunks")
                     st.info(st.session_state.pdf_name)
-                except Exception as exc:
-                    st.error(f"Không xử lý được PDF: {exc}")
+                except Exception:
+                    st.error("Không xử lý được PDF. Hãy kiểm tra file PDF có text và thử lại.")
 
         if st.button("Xóa lịch sử chat", use_container_width=True):
             st.session_state.chat_history = []

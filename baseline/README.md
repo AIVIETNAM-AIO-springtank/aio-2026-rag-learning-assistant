@@ -6,8 +6,8 @@ This folder contains the simple baseline PDF RAG Chatbot implementation for Stre
 
 - Upload a PDF.
 - Extract text with `pypdf`.
-- Store embeddings in session-only ChromaDB.
-- Use Gemini for embeddings and answer generation.
+- Store local hash embeddings in session-only ChromaDB.
+- Use Gemini only for answer generation.
 - Keep the baseline simple and easy to demo.
 
 ## Streamlit Cloud Secret
@@ -28,7 +28,7 @@ Optional environment variables:
 
 ```bash
 GEMINI_GENERATION_MODEL=gemini-1.5-flash
-GEMINI_EMBEDDING_MODEL=text-embedding-004
+LOCAL_EMBEDDING_DIM=384
 DEFAULT_K=2
 ```
 
