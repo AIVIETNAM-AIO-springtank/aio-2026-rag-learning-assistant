@@ -27,7 +27,7 @@ streamlit run baseline/chatbot_app_native.py
 Optional environment variables:
 
 ```bash
-GEMINI_GENERATION_MODEL=gemini-1.5-flash
+GEMINI_GENERATION_MODEL=gemini-2.5-flash
 LOCAL_EMBEDDING_DIM=384
 DEFAULT_K=2
 ```

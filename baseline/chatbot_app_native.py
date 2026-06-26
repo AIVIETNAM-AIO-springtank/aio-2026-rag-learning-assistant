@@ -25,7 +25,7 @@ import requests
 import streamlit as st
 
 
-GEMINI_GENERATION_MODEL = os.getenv("GEMINI_GENERATION_MODEL", "gemini-1.5-flash")
+GEMINI_GENERATION_MODEL = os.getenv("GEMINI_GENERATION_MODEL", "gemini-2.5-flash")
 LOCAL_EMBEDDING_MODEL = "local-hash-embedding"
 LOCAL_EMBEDDING_DIM = int(os.getenv("LOCAL_EMBEDDING_DIM", "384"))
 DEFAULT_K = int(os.getenv("DEFAULT_K", "2"))
